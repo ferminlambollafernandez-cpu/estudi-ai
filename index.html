@@ -1,1 +1,238 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EstudiAI</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f5fb;
+      color: #18213a;
+    }
+    header {
+      background: #172554;
+      color: white;
+      padding: 25px 18px;
+      text-align: center;
+    }
+    header h1 { margin: 0 0 8px; }
+    main {
+      max-width: 720px;
+      margin: 22px auto;
+      padding: 0 14px;
+    }
+    section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 16px;
+      border-radius: 16px;
+      box-shadow: 0 3px 14px #17255412;
+    }
+    label { display: block; font-weight: bold; margin: 12px 0 7px; }
+    select, textarea, input, button {
+      width: 100%;
+      font: inherit;
+      padding: 12px;
+      border-radius: 10px;
+    }
+    select, textarea, input {
+      border: 1px solid #cbd5e1;
+      background: white;
+    }
+    textarea { min-height: 180px; resize: vertical; }
+    button {
+      border: 0;
+      background: #354ee8;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:disabled { opacity: .5; }
+    .secondary { background: #172554; }
+    .resultado {
+      background: #eef2ff;
+      padding: 15px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .pregunta {
+      padding: 14px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .opcion {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+      font-weight: normal;
+    }
+    .opcion input { width: auto; }
+    .oculto { display: none; }
+    #estado { line-height: 1.5; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📚 EstudiAI</h1>
+  <div>Tu compañero de estudio inteligente</div>
+</header>
+
+<main>
+  <section>
+    <h2>1. Tu material</h2>
+    <label for="materia">Materia</label>
+    <input id="materia" value="Inglés" placeholder="Ej. Matemática">
+
+    <label for="contenido">Pegá el texto que tenés que estudiar</label>
+    <textarea id="contenido" placeholder="Pegá acá tus apuntes o el texto del examen..."></textarea>
+
+    <label for="cantidad">Cantidad de preguntas</label>
+    <select id="cantidad">
+      <option value="auto">Que la IA decida</option>
+      <option value="10">10 preguntas</option>
+      <option value="13">13 preguntas</option>
+      <option value="15">15 preguntas</option>
+    </select>
+
+    <button id="crear">Crear resumen y cuestionario</button>
+    <p id="estado" role="status">Listo para estudiar.</p>
+  </section>
+
+  <section id="zonaResumen" class="oculto">
+    <h2>2. Resumen para estudiar</h2>
+    <div id="resumen" class="resultado"></div>
+  </section>
+
+  <section id="zonaQuiz" class="oculto">
+    <h2>3. ¡A demostrar lo que sabés!</h2>
+    <div id="preguntas"></div>
+    <button id="corregir">Corregir mis respuestas</button>
+    <div id="nota" class="resultado oculto" style="margin-top:16px"></div>
+  </section>
+</main>
+
+<script>
+const ejemplo = [
+  {
+    p: "¿Cómo se dice 'levantarse' en inglés?",
+    o: ["Get up", "Go to bed", "Come home", "Eat dinner"],
+    r: 0
+  },
+  {
+    p: "Completá: She ___ up at seven o'clock.",
+    o: ["get", "gets", "getting", "got"],
+    r: 1
+  },
+  {
+    p: "¿Cuál es la forma correcta de decir 7:30?",
+    o: ["Quarter past seven", "Seven o'clock",
+        "Half past seven", "Quarter to seven"],
+    r: 2
+  },
+  {
+    p: "Completá: He doesn't ___ TV at night.",
+    o: ["watches", "watch", "watching", "watched"],
+    r: 1
+  },
+  {
+    p: "¿Cuál es la pregunta correcta?",
+    o: ["Do she go to school?",
+        "Does she goes to school?",
+        "Does she go to school?",
+        "Does she going to school?"],
+    r: 2
+  }
+];
+
+const $ = id => document.getElementById(id);
+let examen = [];
+
+$("crear").addEventListener("click", () => {
+  const materia = $("materia").value.trim();
+  const contenido = $("contenido").value.trim();
+
+  if (!materia || !contenido) {
+    $("estado").textContent = "Escribí la materia y pegá el texto.";
+    return;
+  }
+
+  $("estado").textContent =
+    "Modo de prueba: creando una práctica de ejemplo.";
+  $("resumen").textContent =
+    "Material recibido para " + materia + ".\n\n" +
+    contenido +
+    "\n\nEsta versión inicial todavía no genera un resumen con IA. " +
+    "La conectaremos en el siguiente paso.";
+  $("zonaResumen").classList.remove("oculto");
+
+  examen = ejemplo;
+  $("preguntas").replaceChildren();
+
+  examen.forEach((q, i) => {
+    const div = document.createElement("div");
+    div.className = "pregunta";
+
+    const titulo = document.createElement("p");
+    titulo.textContent = (i + 1) + ". " + q.p;
+    div.appendChild(titulo);
+
+    q.o.forEach((op, j) => {
+      const label = document.createElement("label");
+      label.className = "opcion";
+
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "q" + i;
+      radio.value = j;
+
+      const texto = document.createElement("span");
+      texto.textContent = op;
+
+      label.append(radio, texto);
+      div.appendChild(label);
+    });
+
+    $("preguntas").appendChild(div);
+  });
+
+  $("zonaQuiz").classList.remove("oculto");
+  $("nota").classList.add("oculto");
+  $("estado").textContent = "¡Ya podés practicar!";
+});
+
+$("corregir").addEventListener("click", () => {
+  let puntos = 0;
+  const detalle = [];
+
+  examen.forEach((q, i) => {
+    const elegida = document.querySelector(
+      'input[name="q' + i + '"]:checked'
+    );
+    const bien = elegida && Number(elegida.value) === q.r;
+
+    if (bien) puntos++;
+
+    detalle.push(
+      (i + 1) + ". " + (bien ? "✅ Correcta" : "❌ Incorrecta") +
+      "\nRespuesta: " + q.o[q.r]
+    );
+  });
+
+  const nota = $("nota");
+  nota.textContent =
+    "Resultado: " + puntos + " de " + examen.length +
+    "\nNota orientativa: " +
+    (puntos / examen.length * 10).toFixed(1) +
+    "/10\n\n" + detalle.join("\n\n");
+  nota.classList.remove("oculto");
+});
+</script>
+</body>
+</html>
+
